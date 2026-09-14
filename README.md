@@ -1,30 +1,62 @@
 # keylight
 
-Rekordbox' trafiklys til Serato DJ Pro 4: et lille flydende panel, der viser toneart og BPM
-for hvert deck, der har et nummer loadet, og de tonearter, der passer til det: samme toneart,
-naboerne på Camelot-hjulet og dur/mol-parallellen.
+Rekordbox's key "traffic light" for **Serato DJ Pro 4**: a small floating panel that shows,
+for every deck with a track loaded, the key and BPM, the keys that mix with it, and whether
+the loaded decks fit each other. Keys are drawn in exactly the colours Serato uses in its
+own Key column.
 
 ```
-sh make-app.sh       # bygger ~/Applications/keylight.app (ligger i Dock'en)
-./keylight-start     # alternativ: start binaren direkte i baggrunden
+sh make-app.sh        # builds ~/Applications/keylight.app (drag it to the Dock)
+./keylight-start      # alternative: build and run the bare binary in the background
 ```
 
-Panelet ligger over alle vinduer, også når Serato har fokus, og tager ikke fokus, når man
-trækker i det. Flyt det ved at trække i selve panelet; placeringen huskes. Menuen findes både
-som `♪` i menulinjen og ved højreklik på panelet: vis/skjul, notation (Camelot, standard eller
-begge), størrelse (lille/mellem/stor), "vis kun mens Serato kører" og "start ved login".
-Med de to sidste slået til dukker panelet op, når Serato starter, og forsvinder, når Serato lukkes.
+macOS only. Needs nothing but Xcode's command line tools (Swift); no dependencies.
 
-Tonearterne vises som farvefelter i præcis de farver, Serato selv bruger i Key-kolonnen
-(aflæst fra et skærmbillede; 12B er udledt). Ligger der numre på flere decks, bliver decknummeret
-grønt, når nummeret passer i toneart med et af de andre decks, efter Rekordbox' regel.
+## What it shows
 
-Sådan virker det: Serato 4 skriver inden for et sekund ned i sit bibliotek
-(`~/Library/Application Support/Serato/Library/master.sqlite`, tabellen `history_entry`),
-hvad der er loadet på hvert deck. keylight læser den database read-only en gang i sekundet.
-Den skriver aldrig i den. Bryder Serato formatet i en opdatering, viser panelet bare ingenting.
+- One row per deck: the deck number, the key as a coloured chip (Camelot, standard
+  notation, or both), the BPM, and the track name.
+- Below it the four keys that mix with that track, following Rekordbox's rule: the same
+  key, its two neighbours on the Camelot wheel, and the relative major/minor. The current
+  key is outlined.
+- The deck number turns green when the track fits the key of at least one other loaded
+  deck. The green is one Serato never uses for a key, so it cannot be mistaken for one.
 
-Filer: `main.swift` (vindue og menu), `camelot.swift` (tonearter og kompatibilitet),
-`camelot_test.swift` + `test.sh` (test af tonearts-logikken), `build.sh`, `make-app.sh` + `make-icon.swift`
-(app-bundle med ikon til Dock'en).
-Kræver kun Xcode Command Line Tools (Swift).
+The panel floats above every window, also while Serato has focus, and never takes focus
+itself. Drag it by its body; its position is remembered. The menu lives in two places, the
+`♪` icon in the menu bar and a right-click on the panel: show/hide, notation, size
+(small/medium/large), "show only while Serato is running" and "start at login". With
+the last two enabled the panel appears when Serato starts and disappears when it quits.
+
+## How it works
+
+Serato DJ Pro 4 keeps its library in SQLite
+(`~/Library/Application Support/Serato/Library/master.sqlite`) and writes a row into
+`history_entry` within a second of a track being loaded on a deck; the row's `end_time`
+stays `-1` until the deck is cleared or reloaded. keylight opens that database read-only
+once a second, and only actually queries it when the database files changed. It never
+writes to it. Should a Serato update change the layout, the panel simply shows nothing.
+
+Cost while running: under 1 % of one core, about 15 MB of memory.
+
+## Colours
+
+The 24 key colours were read off a screenshot of Serato's Key column with
+`tools/rowsample.swift`: A (minor) keys are the bright colours, B (major) keys the dimmer
+versions. 12B was outside the screenshot and is derived from 12A. `tools/wheelsample.swift`
+does the same for a Camelot-wheel image and `tools/colorsample.swift` lists the dominant
+colours of any image.
+
+## Files
+
+```
+main.swift            window, menu, Serato reader
+camelot.swift         key parsing (Camelot, Open Key, standard notation) and compatibility
+camelot_test.swift    tests for the key logic: sh test.sh
+build.sh              compile the binary
+make-app.sh           compile and wrap as keylight.app with an icon (make-icon.swift)
+keylight-start        run the bare binary in the background
+tools/                colour samplers used to extract Serato's palette
+```
+
+MIT licence.
