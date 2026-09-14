@@ -311,6 +311,31 @@ final class MatchCellView: NSView {
     }
 }
 
+/// One line of dim text with a ▾/▴ at the right; a click toggles the list below it.
+final class FoldHeader: NSView {
+    var text = "" { didSet { needsDisplay = true } }
+    var color = NSColor(white: 1, alpha: 0.6) { didSet { needsDisplay = true } }
+    var expanded = false { didSet { needsDisplay = true } }
+    var fontSize: CGFloat = 11.5
+    var onClick: (() -> Void)?
+    override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { onClick?() }
+    override func draw(_ dirtyRect: NSRect) {
+        let font = NSFont.systemFont(ofSize: fontSize, weight: .medium)
+        let attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+        let arrow = expanded ? "▴" : "▾"
+        let asz = (arrow as NSString).size(withAttributes: attrs)
+        (arrow as NSString).draw(at: NSPoint(x: bounds.width - asz.width, y: (bounds.height - asz.height) / 2), withAttributes: attrs)
+        let style = NSMutableParagraphStyle()
+        style.lineBreakMode = .byTruncatingTail
+        var a2 = attrs
+        a2[.paragraphStyle] = style
+        let tsz = (text as NSString).size(withAttributes: attrs)
+        (text as NSString).draw(in: NSRect(x: 0, y: (bounds.height - tsz.height) / 2, width: bounds.width - asz.width - 8, height: tsz.height + 2), withAttributes: a2)
+    }
+}
+
 final class ClickableTable: NSTableView {
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }   // a click works without focusing the panel first
 }
@@ -336,7 +361,8 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
     var referenceMode: Int                    // 0 = the deck that has been playing longest, 1-4 = that deck
 
     // matches section
-    let matchHeader = NSTextField(labelWithString: "")
+    let matchHeader = FoldHeader()
+    var listExpanded: Bool
     let scroll = NSScrollView()
     let table = ClickableTable()
     var matches: [LibraryTrack] = []
@@ -358,6 +384,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         crateId = defaults.integer(forKey: "crateId")
         bpmTolerance = defaults.object(forKey: "bpmTolerance") == nil ? 6 : defaults.double(forKey: "bpmTolerance")
         referenceMode = defaults.integer(forKey: "referenceMode")
+        listExpanded = defaults.bool(forKey: "listExpanded")
         panel = NSPanel(contentRect: NSRect(x: 80, y: 80, width: 360, height: 100),
                         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         super.init()
@@ -388,9 +415,12 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         status.isEditable = false; status.isBordered = false; status.drawsBackground = false
         content.addSubview(status)
 
-        matchHeader.textColor = NSColor(white: 1, alpha: 0.6)
-        matchHeader.isEditable = false; matchHeader.isBordered = false; matchHeader.drawsBackground = false
-        matchHeader.lineBreakMode = .byTruncatingTail
+        matchHeader.onClick = { [weak self] in
+            guard let self = self else { return }
+            self.listExpanded.toggle()
+            self.defaults.set(self.listExpanded, forKey: "listExpanded")
+            self.layoutPanel()
+        }
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("m"))
         table.addTableColumn(col)
         table.headerView = nil
@@ -615,20 +645,21 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
     }
 
     func updateMatchHeader() {
-        matchHeader.font = NSFont.systemFont(ofSize: 11.5 * scale, weight: .medium)
+        matchHeader.fontSize = 11.5 * scale
+        matchHeader.expanded = listExpanded
         if Date() < copiedUntil {
-            matchHeader.stringValue = "Kopieret – sæt ind i Seratos søgefelt"
-            matchHeader.textColor = DeckRow.matchGreen
+            matchHeader.text = "Kopieret – sæt ind i Seratos søgefelt"
+            matchHeader.color = DeckRow.matchGreen
             return
         }
-        matchHeader.textColor = NSColor(white: 1, alpha: 0.6)
+        matchHeader.color = NSColor(white: 1, alpha: 0.6)
         let crate = crateId == 0 ? "hele biblioteket" : (crateNames[crateId] ?? "crate")
         let ref = referenceDeck(in: currentDecks)
         let bpm = bpmTolerance == 0 ? "alle BPM" : String(format: "±%g %%", bpmTolerance)
         if let r = ref {
-            matchHeader.stringValue = "Passer til deck \(r.number) · \(bpm) · \(crate) · \(filtered.count) numre"
+            matchHeader.text = "\(filtered.count) numre passer til deck \(r.number) · \(bpm) · \(crate)"
         } else {
-            matchHeader.stringValue = "Load et nummer, så vises det, der passer · \(crate)"
+            matchHeader.text = "Load et nummer, så vises det, der passer · \(crate)"
         }
     }
 
@@ -704,9 +735,11 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         var listRows = 0
         var listHeight: CGFloat = 0
         if showMatches {
-            let maxByScreen = Int(((NSScreen.main?.visibleFrame.height ?? 900) * 0.55) / listRowH)
-            listRows = max(3, min(12, maxByScreen, max(filtered.count, 1)))
-            listHeight = 24 * scale + CGFloat(listRows) * listRowH + 10 * scale
+            if listExpanded {
+                let maxByScreen = Int(((NSScreen.main?.visibleFrame.height ?? 900) * 0.5) / listRowH)
+                listRows = max(2, min(8, maxByScreen, max(filtered.count, 1)))
+            }
+            listHeight = 26 * scale + CGFloat(listRows) * listRowH + (listExpanded ? 10 * scale : 2 * scale)
         }
         let height = CGFloat(shown.count) * rowH + statusHeight + listHeight + 12 * scale
         var frame = panel.frame
@@ -725,12 +758,12 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
             top -= statusHeight
         }
         matchHeader.isHidden = !showMatches
-        scroll.isHidden = !showMatches
+        scroll.isHidden = !(showMatches && listExpanded)
         if showMatches {
             let x = 16 * scale
             updateMatchHeader()
-            matchHeader.frame = NSRect(x: x, y: top - 22 * scale, width: width - 2 * x, height: 18 * scale)
-            scroll.frame = NSRect(x: x - 4 * scale, y: top - 26 * scale - CGFloat(listRows) * listRowH, width: width - 2 * x + 8 * scale, height: CGFloat(listRows) * listRowH)
+            matchHeader.frame = NSRect(x: x, y: top - 24 * scale, width: width - 2 * x, height: 22 * scale)
+            scroll.frame = NSRect(x: x - 4 * scale, y: top - 28 * scale - CGFloat(listRows) * listRowH, width: width - 2 * x + 8 * scale, height: CGFloat(listRows) * listRowH)
             table.rowHeight = 24 * scale
             table.tableColumns.first?.width = scroll.frame.width - 4
             table.reloadData()

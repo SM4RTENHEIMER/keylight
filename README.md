@@ -30,8 +30,10 @@ the last two enabled the panel appears when Serato starts and disappears when it
 
 ## Matching tracks (optional)
 
-"Vis matchende numre" in the menu extends the panel with a list of the tracks that fit the
-deck you are mixing from: compatible key and, by default, within ±6 % BPM. Pick the crate
+"Vis matchende numre" in the menu adds one line to the panel, e.g. "23 tracks fit deck 1 ·
+±6 % · MAIN & POP"; click it to unfold the list itself (up to eight rows, scrollable) and
+click again to fold it away. The list holds the tracks that fit the deck you are mixing
+from: compatible key and, by default, within ±6 % BPM. Pick the crate
 to search in (or the whole library), the BPM window (±3/6/8/12 %, or any), and which deck
 is the reference: by default the one that has been playing longest, marked with ▸; click
 a deck row to pin that deck instead (click again to go back to automatic). The list is
