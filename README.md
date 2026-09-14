@@ -28,14 +28,26 @@ itself. Drag it by its body; its position is remembered. The menu lives in two p
 (small/medium/large), "show only while Serato is running" and "start at login". With
 the last two enabled the panel appears when Serato starts and disappears when it quits.
 
+## Matching tracks (optional)
+
+"Vis matchende numre" in the menu extends the panel with a list of the tracks that fit the
+deck you are mixing from: compatible key and, by default, within ±6 % BPM. Pick the crate
+to search in (or the whole library), the BPM window (±3/6/8/12 %, or any), and which deck
+is the reference: by default the one that has been playing longest, marked with ▸. A
+search field filters by title or artist; the list is sorted by kind of match (same key,
+relative key, neighbours) and then by BPM distance. Clicking a row copies "artist title"
+to the clipboard so it can be pasted into Serato's search box. Tracks already on a deck
+are left out.
+
 ## How it works
 
 Serato DJ Pro 4 keeps its library in SQLite
 (`~/Library/Application Support/Serato/Library/master.sqlite`) and writes a row into
 `history_entry` within a second of a track being loaded on a deck; the row's `end_time`
-stays `-1` until the deck is cleared or reloaded. keylight opens that database read-only
-once a second, and only actually queries it when the database files changed. It never
-writes to it. Should a Serato update change the layout, the panel simply shows nothing.
+stays `-1` until the deck is cleared or reloaded. The matching list reads `asset`,
+`container` and `container_asset` from the same file. keylight opens the database
+read-only once a second, and only actually queries it when the database files changed.
+It never writes to it. Should a Serato update change the layout, the panel simply shows nothing.
 
 Cost while running: under 1 % of one core, about 15 MB of memory.
 
