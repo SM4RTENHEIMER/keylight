@@ -359,6 +359,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
     var crateId: Int                          // 0 = whole library
     var bpmTolerance: Double                  // percent, 0 = any BPM
     var referenceMode: Int                    // 0 = the deck that has been playing longest, 1-4 = that deck
+    var sortMode: Int                         // 0 best match, 1 BPM ascending, 2 BPM descending, 3 nearest BPM, 4 artist, 5 title
 
     // matches section
     let matchHeader = FoldHeader()
@@ -385,6 +386,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         bpmTolerance = defaults.object(forKey: "bpmTolerance") == nil ? 6 : defaults.double(forKey: "bpmTolerance")
         referenceMode = defaults.integer(forKey: "referenceMode")
         listExpanded = defaults.bool(forKey: "listExpanded")
+        sortMode = defaults.integer(forKey: "sortMode")
         panel = NSPanel(contentRect: NSRect(x: 80, y: 80, width: 360, height: 100),
                         styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         super.init()
@@ -495,6 +497,13 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         let refItem = NSMenuItem(title: "Match mod", action: nil, keyEquivalent: "")
         refItem.submenu = refMenu
         menu.addItem(refItem)
+        let sortMenu = NSMenu()
+        for (i, title) in ["Bedste match først", "BPM, stigende", "BPM, faldende", "BPM tættest på referencen", "Artist", "Titel"].enumerated() {
+            add(sortMenu, title, #selector(pickSort), on: sortMode == i, tag: i)
+        }
+        let sortItem = NSMenuItem(title: "Sortér listen", action: nil, keyEquivalent: "")
+        sortItem.submenu = sortMenu
+        menu.addItem(sortItem)
         menu.addItem(.separator())
         add(menu, "Camelot + standard", #selector(setBoth), on: notation == .both)
         add(menu, "Kun Camelot (8A)", #selector(setCamelot), on: notation == .camelot)
@@ -566,6 +575,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
     @objc func toggleMatches() { showMatches.toggle(); defaults.set(showMatches, forKey: "showMatches"); rebuildMenus(); refresh(force: true) }
     @objc func pickCrate(_ sender: NSMenuItem) { crateId = sender.tag; defaults.set(crateId, forKey: "crateId"); rebuildMenus(); refresh(force: true) }
     @objc func pickBpm(_ sender: NSMenuItem) { bpmTolerance = Double(sender.tag) / 10; defaults.set(bpmTolerance, forKey: "bpmTolerance"); rebuildMenus(); refresh(force: true) }
+    @objc func pickSort(_ sender: NSMenuItem) { sortMode = sender.tag; defaults.set(sortMode, forKey: "sortMode"); rebuildMenus(); refresh(force: true) }
     @objc func pickReference(_ sender: NSMenuItem) { referenceMode = sender.tag; defaults.set(referenceMode, forKey: "referenceMode"); rebuildMenus(); refresh(force: true) }
 
     func setNotation(_ n: Notation) { notation = n; defaults.set(n.rawValue, forKey: "notation"); rebuildMenus(); refresh(force: true) }
@@ -616,12 +626,23 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
                 && (bpmTolerance == 0 || ref.bpm <= 0 || t.bpm <= 0 || abs(t.bpm - ref.bpm) / ref.bpm * 100 <= bpmTolerance)
         }
         func rank(_ k: Camelot) -> Int { k == cam ? 0 : (k.number == cam.number ? 1 : 2) }   // same key, relative, neighbours
-        list.sort { a, b in
-            let ra = rank(a.key), rb = rank(b.key)
-            if ra != rb { return ra < rb }
-            let da = abs(a.bpm - ref.bpm), db = abs(b.bpm - ref.bpm)
-            if da != db { return da < db }
-            return a.name < b.name
+        func byName(_ a: LibraryTrack, _ b: LibraryTrack) -> Bool { a.name.localizedCaseInsensitiveCompare(b.name) == .orderedAscending }
+        switch sortMode {
+        case 1: list.sort { a, b in a.bpm != b.bpm ? a.bpm < b.bpm : byName(a, b) }
+        case 2: list.sort { a, b in a.bpm != b.bpm ? a.bpm > b.bpm : byName(a, b) }
+        case 3: list.sort { a, b in
+                let da = abs(a.bpm - ref.bpm), db = abs(b.bpm - ref.bpm)
+                return da != db ? da < db : byName(a, b) }
+        case 4: list.sort { a, b in
+                let c = a.artist.localizedCaseInsensitiveCompare(b.artist)
+                return c != .orderedSame ? c == .orderedAscending : byName(a, b) }
+        case 5: list.sort(by: byName)
+        default: list.sort { a, b in
+                let ra = rank(a.key), rb = rank(b.key)
+                if ra != rb { return ra < rb }
+                let da = abs(a.bpm - ref.bpm), db = abs(b.bpm - ref.bpm)
+                if da != db { return da < db }
+                return byName(a, b) }
         }
         matches = list
         applyFilter()
@@ -692,7 +713,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         seratoWasRunning = running
 
         let signature = (decks ?? []).map { "\($0.number)|\($0.name)|\($0.key)|\($0.bpm)" }.joined(separator: ";")
-            + "|\(running)|\(notation.rawValue)|\(scale)|\(showMatches)|\(crateId)|\(bpmTolerance)|\(referenceMode)"
+            + "|\(running)|\(notation.rawValue)|\(scale)|\(showMatches)|\(crateId)|\(bpmTolerance)|\(referenceMode)|\(sortMode)"
         if !force && signature == lastSignature { return }
         lastSignature = signature
 
