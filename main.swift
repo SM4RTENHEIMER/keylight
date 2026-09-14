@@ -435,7 +435,10 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         table.action = #selector(rowClicked)
         scroll.documentView = table
         scroll.hasVerticalScroller = true
+        scroll.hasHorizontalScroller = false
+        scroll.horizontalScrollElasticity = .none        // the list never slides sideways; long titles are just cut off
         scroll.autohidesScrollers = true
+        table.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         scroll.drawsBackground = false
         scroll.scrollerStyle = .overlay
         for v in [matchHeader, scroll] as [NSView] { v.isHidden = true; content.addSubview(v) }
@@ -786,7 +789,9 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
             matchHeader.frame = NSRect(x: x, y: top - 24 * scale, width: width - 2 * x, height: 22 * scale)
             scroll.frame = NSRect(x: x - 4 * scale, y: top - 28 * scale - CGFloat(listRows) * listRowH, width: width - 2 * x + 8 * scale, height: CGFloat(listRows) * listRowH)
             table.rowHeight = 24 * scale
-            table.tableColumns.first?.width = scroll.frame.width - 4
+            let inner = scroll.contentView.bounds.width
+            table.tableColumns.first?.width = inner
+            table.frame.size.width = inner
             table.reloadData()
         }
     }
