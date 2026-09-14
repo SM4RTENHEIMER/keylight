@@ -211,7 +211,10 @@ final class ChipsView: NSView {
     var prefixColor: NSColor? = nil { didSet { needsDisplay = true } }   // nil = dim white
     var suffix = "" { didSet { needsDisplay = true } }
     var fontSize: CGFloat = 15
+    var onClick: (() -> Void)?
     override var isFlipped: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override func mouseDown(with event: NSEvent) { if let f = onClick { f() } else { super.mouseDown(with: event) } }
 
     override func draw(_ dirtyRect: NSRect) {
         let font = NSFont.monospacedDigitSystemFont(ofSize: fontSize, weight: .bold)
@@ -314,7 +317,7 @@ final class ClickableTable: NSTableView {
 
 // MARK: - App
 
-final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTableViewDelegate, NSSearchFieldDelegate {
+final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTableViewDelegate {
     let panel: NSPanel
     let content = NSView()
     let status = NSTextField(labelWithString: "")
@@ -334,7 +337,6 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
 
     // matches section
     let matchHeader = NSTextField(labelWithString: "")
-    let search = NSSearchField()
     let scroll = NSScrollView()
     let table = ClickableTable()
     var matches: [LibraryTrack] = []
@@ -389,9 +391,6 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         matchHeader.textColor = NSColor(white: 1, alpha: 0.6)
         matchHeader.isEditable = false; matchHeader.isBordered = false; matchHeader.drawsBackground = false
         matchHeader.lineBreakMode = .byTruncatingTail
-        search.placeholderString = "søg titel eller artist"
-        search.delegate = self
-        search.focusRingType = .none
         let col = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("m"))
         table.addTableColumn(col)
         table.headerView = nil
@@ -407,7 +406,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         scroll.autohidesScrollers = true
         scroll.drawsBackground = false
         scroll.scrollerStyle = .overlay
-        for v in [matchHeader, search, scroll] as [NSView] { v.isHidden = true; content.addSubview(v) }
+        for v in [matchHeader, scroll] as [NSView] { v.isHidden = true; content.addSubview(v) }
 
         if let saved = defaults.string(forKey: "frame") {
             let r = NSRectFromString(saved)
@@ -461,7 +460,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         bpmItem.submenu = bpmMenu
         menu.addItem(bpmItem)
         let refMenu = NSMenu()
-        add(refMenu, "Det deck der har spillet længst", #selector(pickReference), on: referenceMode == 0, tag: 0)
+        add(refMenu, "Automatisk: det deck der har spillet længst", #selector(pickReference), on: referenceMode == 0, tag: 0)
         for d in 1...4 { add(refMenu, "Deck \(d)", #selector(pickReference), on: referenceMode == d, tag: d) }
         let refItem = NSMenuItem(title: "Match mod", action: nil, keyEquivalent: "")
         refItem.submenu = refMenu
@@ -599,12 +598,9 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
     }
 
     func applyFilter() {
-        let q = search.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
-        filtered = q.isEmpty ? matches : matches.filter { $0.name.lowercased().contains(q) || $0.artist.lowercased().contains(q) }
+        filtered = matches
         table.reloadData()
     }
-
-    func controlTextDidChange(_ obj: Notification) { applyFilter(); layoutPanel() }
 
     @objc func rowClicked() {
         let row = table.clickedRow
@@ -683,6 +679,13 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         let ref = referenceDeck(in: shown)
         for (i, (row, deck)) in zip(rows, shown).enumerated() {
             row.show(deck, notation: notation, fits: fits[i], isReference: showMatches && ref?.number == deck.number && shown.count > 1)
+            row.head.onClick = { [weak self] in
+                guard let self = self, self.showMatches else { return }
+                self.referenceMode = self.referenceMode == deck.number ? 0 : deck.number
+                self.defaults.set(self.referenceMode, forKey: "referenceMode")
+                self.rebuildMenus()
+                self.refresh(force: true)
+            }
         }
         computeMatches(reference: ref, loaded: shown)
         status.font = NSFont.systemFont(ofSize: 13 * scale, weight: .medium)
@@ -703,7 +706,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         if showMatches {
             let maxByScreen = Int(((NSScreen.main?.visibleFrame.height ?? 900) * 0.55) / listRowH)
             listRows = max(3, min(12, maxByScreen, max(filtered.count, 1)))
-            listHeight = 24 * scale + 30 * scale + CGFloat(listRows) * listRowH + 10 * scale
+            listHeight = 24 * scale + CGFloat(listRows) * listRowH + 10 * scale
         }
         let height = CGFloat(shown.count) * rowH + statusHeight + listHeight + 12 * scale
         var frame = panel.frame
@@ -722,15 +725,12 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
             top -= statusHeight
         }
         matchHeader.isHidden = !showMatches
-        search.isHidden = !showMatches
         scroll.isHidden = !showMatches
         if showMatches {
             let x = 16 * scale
             updateMatchHeader()
             matchHeader.frame = NSRect(x: x, y: top - 22 * scale, width: width - 2 * x, height: 18 * scale)
-            search.frame = NSRect(x: x, y: top - 50 * scale, width: width - 2 * x, height: 24 * scale)
-            search.font = NSFont.systemFont(ofSize: 12 * scale)
-            scroll.frame = NSRect(x: x - 4 * scale, y: top - 54 * scale - CGFloat(listRows) * listRowH, width: width - 2 * x + 8 * scale, height: CGFloat(listRows) * listRowH)
+            scroll.frame = NSRect(x: x - 4 * scale, y: top - 26 * scale - CGFloat(listRows) * listRowH, width: width - 2 * x + 8 * scale, height: CGFloat(listRows) * listRowH)
             table.rowHeight = 24 * scale
             table.tableColumns.first?.width = scroll.frame.width - 4
             table.reloadData()

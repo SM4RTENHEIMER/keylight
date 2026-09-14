@@ -33,11 +33,11 @@ the last two enabled the panel appears when Serato starts and disappears when it
 "Vis matchende numre" in the menu extends the panel with a list of the tracks that fit the
 deck you are mixing from: compatible key and, by default, within ±6 % BPM. Pick the crate
 to search in (or the whole library), the BPM window (±3/6/8/12 %, or any), and which deck
-is the reference: by default the one that has been playing longest, marked with ▸. A
-search field filters by title or artist; the list is sorted by kind of match (same key,
-relative key, neighbours) and then by BPM distance. Clicking a row copies "artist title"
-to the clipboard so it can be pasted into Serato's search box. Tracks already on a deck
-are left out.
+is the reference: by default the one that has been playing longest, marked with ▸; click
+a deck row to pin that deck instead (click again to go back to automatic). The list is
+sorted by kind of match (same key, relative key, neighbours) and then by BPM distance.
+Clicking a row copies "artist title" to the clipboard so it can be pasted into Serato's
+search box. Tracks already on a deck are left out.
 
 ## How it works
 
