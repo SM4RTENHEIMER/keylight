@@ -2,6 +2,6 @@
 # Start keylight in the background (build first if needed). Quit it from the ♪ menu bar icon.
 HERE="$(cd "$(dirname "$0")" && pwd)"
 [ -x "$HERE/keylight" ] || sh "$HERE/build.sh" || exit 1
-pgrep -x keylight >/dev/null && { echo "keylight kører allerede"; exit 0; }
+pgrep -x keylight >/dev/null && { echo "keylight is already running"; exit 0; }
 nohup "$HERE/keylight" >/dev/null 2>&1 &
-echo "keylight startet - se ♪ i menulinjen"
+echo "keylight started - see ♪ in the menu bar"

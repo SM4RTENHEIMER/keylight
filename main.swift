@@ -277,7 +277,7 @@ final class DeckRow {
             keys.prefix = "➜"
             keys.chips = c.compatible.map { ChipsView.Chip(text: keyText($0, notation), color: keyColor($0), highlight: $0 == c) }
         } else {
-            head.chips = [ChipsView.Chip(text: deck.key.isEmpty ? "ingen toneart" : deck.key, color: NSColor(white: 0.75, alpha: 1), highlight: false)]
+            head.chips = [ChipsView.Chip(text: deck.key.isEmpty ? "no key" : deck.key, color: NSColor(white: 0.75, alpha: 1), highlight: false)]
             keys.prefix = ""
             keys.chips = []
         }
@@ -401,7 +401,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         panel.hasShadow = true
         panel.isMovableByWindowBackground = true       // drag it anywhere by its body
         panel.hidesOnDeactivate = false
-        panel.becomesKeyOnlyIfNeeded = true            // only the search field ever takes the keyboard
+        panel.becomesKeyOnlyIfNeeded = true            // never steal the keyboard from Serato
         panel.isReleasedWhenClosed = false
         panel.title = "keylight"
 
@@ -477,49 +477,49 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
             it.tag = tag
             m.addItem(it)
         }
-        add(menu, "Skjul panel (vis igen fra ♪ i menulinjen)", #selector(toggle))
+        add(menu, "Hide panel (show it again from ♪ in the menu bar)", #selector(toggle))
         menu.addItem(.separator())
-        add(menu, "Vis matchende numre", #selector(toggleMatches), on: showMatches)
+        add(menu, "Show matching tracks", #selector(toggleMatches), on: showMatches)
         let crateMenu = NSMenu()
-        add(crateMenu, "Hele biblioteket", #selector(pickCrate), on: crateId == 0, tag: 0)
+        add(crateMenu, "Whole library", #selector(pickCrate), on: crateId == 0, tag: 0)
         crateMenu.addItem(.separator())
         buildCrateMenu(into: crateMenu)
         let crateItem = NSMenuItem(title: "Crate", action: nil, keyEquivalent: "")
         crateItem.submenu = crateMenu
         menu.addItem(crateItem)
         let bpmMenu = NSMenu()
-        for (title, pct) in [("± 3 %", 3.0), ("± 6 %", 6.0), ("± 8 %", 8.0), ("± 12 %", 12.0), ("Alle BPM", 0.0)] {
+        for (title, pct) in [("± 3 %", 3.0), ("± 6 %", 6.0), ("± 8 %", 8.0), ("± 12 %", 12.0), ("Any BPM", 0.0)] {
             add(bpmMenu, title, #selector(pickBpm), on: bpmTolerance == pct, tag: Int(pct * 10))
         }
-        let bpmItem = NSMenuItem(title: "BPM-område", action: nil, keyEquivalent: "")
+        let bpmItem = NSMenuItem(title: "BPM range", action: nil, keyEquivalent: "")
         bpmItem.submenu = bpmMenu
         menu.addItem(bpmItem)
         let refMenu = NSMenu()
-        add(refMenu, "Automatisk: det deck der har spillet længst", #selector(pickReference), on: referenceMode == 0, tag: 0)
+        add(refMenu, "Automatic: the deck that has been playing longest", #selector(pickReference), on: referenceMode == 0, tag: 0)
         for d in 1...4 { add(refMenu, "Deck \(d)", #selector(pickReference), on: referenceMode == d, tag: d) }
-        let refItem = NSMenuItem(title: "Match mod", action: nil, keyEquivalent: "")
+        let refItem = NSMenuItem(title: "Match against", action: nil, keyEquivalent: "")
         refItem.submenu = refMenu
         menu.addItem(refItem)
         let sortMenu = NSMenu()
-        for (i, title) in ["Bedste match først", "BPM, stigende", "BPM, faldende", "BPM tættest på referencen", "Artist", "Titel"].enumerated() {
+        for (i, title) in ["Best match first", "BPM, ascending", "BPM, descending", "BPM closest to the reference", "Artist", "Title"].enumerated() {
             add(sortMenu, title, #selector(pickSort), on: sortMode == i, tag: i)
         }
-        let sortItem = NSMenuItem(title: "Sortér listen", action: nil, keyEquivalent: "")
+        let sortItem = NSMenuItem(title: "Sort the list", action: nil, keyEquivalent: "")
         sortItem.submenu = sortMenu
         menu.addItem(sortItem)
         menu.addItem(.separator())
         add(menu, "Camelot + standard", #selector(setBoth), on: notation == .both)
-        add(menu, "Kun Camelot (8A)", #selector(setCamelot), on: notation == .camelot)
-        add(menu, "Kun standard (Am)", #selector(setStandard), on: notation == .standard)
+        add(menu, "Camelot only (8A)", #selector(setCamelot), on: notation == .camelot)
+        add(menu, "Standard only (Am)", #selector(setStandard), on: notation == .standard)
         menu.addItem(.separator())
-        add(menu, "Lille", #selector(setSmall), on: scale < 0.95)
-        add(menu, "Mellem", #selector(setMedium), on: scale >= 0.95 && scale <= 1.05)
-        add(menu, "Stor", #selector(setLarge), on: scale > 1.05)
+        add(menu, "Small", #selector(setSmall), on: scale < 0.95)
+        add(menu, "Medium", #selector(setMedium), on: scale >= 0.95 && scale <= 1.05)
+        add(menu, "Large", #selector(setLarge), on: scale > 1.05)
         menu.addItem(.separator())
-        add(menu, "Vis kun mens Serato kører", #selector(toggleFollow), on: followSerato)
-        add(menu, "Start ved login", #selector(toggleLogin), on: SMAppService.mainApp.status == .enabled)
+        add(menu, "Show only while Serato is running", #selector(toggleFollow), on: followSerato)
+        add(menu, "Start at login", #selector(toggleLogin), on: SMAppService.mainApp.status == .enabled)
         menu.addItem(.separator())
-        add(menu, "Afslut keylight", #selector(quit), key: "q")
+        add(menu, "Quit keylight", #selector(quit), key: "q")
         return menu
     }
 
@@ -546,7 +546,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
                 it.state = crateId == c.id ? .on : .off
                 if !kids.isEmpty {
                     let sub = NSMenu()
-                    let selfItem = NSMenuItem(title: "\(c.name) (selve craten)", action: #selector(pickCrate), keyEquivalent: "")
+                    let selfItem = NSMenuItem(title: "\(c.name) (this crate only)", action: #selector(pickCrate), keyEquivalent: "")
                     selfItem.target = self
                     selfItem.tag = c.id
                     selfItem.state = crateId == c.id ? .on : .off
@@ -605,8 +605,8 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
             if SMAppService.mainApp.status == .enabled { try SMAppService.mainApp.unregister() } else { try SMAppService.mainApp.register() }
         } catch {
             let a = NSAlert()
-            a.messageText = "Kunne ikke ændre login-start"
-            a.informativeText = "\(error.localizedDescription)\n\nDu kan også tilføje keylight under Systemindstillinger → Generelt → Loginemner."
+            a.messageText = "Could not change start at login"
+            a.informativeText = "\(error.localizedDescription)\n\nYou can also add keylight under System Settings → General → Login Items."
             a.runModal()
         }
         rebuildMenus()
@@ -672,18 +672,18 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         matchHeader.fontSize = 11.5 * scale
         matchHeader.expanded = listExpanded
         if Date() < copiedUntil {
-            matchHeader.text = "Kopieret – sæt ind i Seratos søgefelt"
+            matchHeader.text = "Copied – paste it into Serato's search box"
             matchHeader.color = DeckRow.matchGreen
             return
         }
         matchHeader.color = NSColor(white: 1, alpha: 0.6)
-        let crate = crateId == 0 ? "hele biblioteket" : (crateNames[crateId] ?? "crate")
+        let crate = crateId == 0 ? "whole library" : (crateNames[crateId] ?? "crate")
         let ref = referenceDeck(in: currentDecks)
-        let bpm = bpmTolerance == 0 ? "alle BPM" : String(format: "±%g %%", bpmTolerance)
+        let bpm = bpmTolerance == 0 ? "any BPM" : String(format: "±%g %%", bpmTolerance)
         if let r = ref {
-            matchHeader.text = "\(filtered.count) numre passer til deck \(r.number) · \(bpm) · \(crate)"
+            matchHeader.text = "\(filtered.count) tracks fit deck \(r.number) · \(bpm) · \(crate)"
         } else {
-            matchHeader.text = "Load et nummer, så vises det, der passer · \(crate)"
+            matchHeader.text = "Load a track to see what fits · \(crate)"
         }
     }
 
@@ -744,7 +744,7 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         }
         computeMatches(reference: ref, loaded: shown)
         status.font = NSFont.systemFont(ofSize: 13 * scale, weight: .medium)
-        status.stringValue = decks == nil ? "Serato-bibliotek ikke fundet" : (running ? "Intet nummer på decks" : "Serato kører ikke")
+        status.stringValue = decks == nil ? "Serato library not found" : (running ? "No track on the decks" : "Serato is not running")
         status.isHidden = !shown.isEmpty
         layoutPanel()
     }
