@@ -5,10 +5,16 @@ for every deck with a track loaded, the key and BPM, the keys that mix with it, 
 the loaded decks fit each other. Keys are drawn in exactly the colours Serato uses in its
 own Key column.
 
+<p align="center"><img src="docs/panel.png" width="356" alt="The keylight panel: two decks in 2A, both deck numbers green, and a list of matching tracks"></p>
+
 ```
-sh make-app.sh        # builds ~/Applications/keylight.app (drag it to the Dock)
-./keylight-start      # alternative: build and run the bare binary in the background
+git clone https://github.com/SM4RTENHEIMER/keylight.git
+cd keylight
+sh make-app.sh
 ```
+
+This builds `~/Applications/keylight.app`; drag it to the Dock. To run the bare binary in the
+background instead, use `./keylight-start`.
 
 macOS 13 or later. Needs nothing but Xcode's command line tools (Swift); no dependencies.
 
@@ -27,6 +33,8 @@ itself. Drag it by its body; its position is remembered. The menu lives in two p
 `♪` icon in the menu bar and a right-click on the panel: show/hide, notation, size
 (small/medium/large), "show only while Serato is running" and "start at login". With
 the last two enabled the panel appears when Serato starts and disappears when it quits.
+
+![keylight floating over Serato DJ Pro 4 with two decks loaded](docs/serato.png)
 
 ## Matching tracks (optional)
 
@@ -71,6 +79,7 @@ build.sh              compile the binary
 make-app.sh           compile and wrap as keylight.app with an icon (make-icon.swift)
 keylight-start        run the bare binary in the background
 tools/                colour samplers used to extract Serato's palette
+docs/                 screenshots for this README
 ```
 
 ## Licence
