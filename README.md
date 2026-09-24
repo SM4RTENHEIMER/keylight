@@ -10,7 +10,7 @@ sh make-app.sh        # builds ~/Applications/keylight.app (drag it to the Dock)
 ./keylight-start      # alternative: build and run the bare binary in the background
 ```
 
-macOS only. Needs nothing but Xcode's command line tools (Swift); no dependencies.
+macOS 13 or later. Needs nothing but Xcode's command line tools (Swift); no dependencies.
 
 ## What it shows
 
@@ -30,7 +30,7 @@ the last two enabled the panel appears when Serato starts and disappears when it
 
 ## Matching tracks (optional)
 
-"Vis matchende numre" in the menu adds one line to the panel, e.g. "23 tracks fit deck 1 ·
+"Show matching tracks" in the menu adds one line to the panel, e.g. "23 tracks fit deck 1 ·
 ±6 % · MAIN & POP"; click it to unfold the list itself (up to eight rows, scrollable) and
 click again to fold it away. The list holds the tracks that fit the deck you are mixing
 from: compatible key and, by default, within ±6 % BPM. Pick the crate
@@ -73,4 +73,9 @@ keylight-start        run the bare binary in the background
 tools/                colour samplers used to extract Serato's palette
 ```
 
-MIT licence.
+## Licence
+
+MIT, see [LICENSE](LICENSE).
+
+keylight is an independent project and is not affiliated with or endorsed by Serato or
+AlphaTheta (Rekordbox). It only reads Serato's library file and never modifies it.
