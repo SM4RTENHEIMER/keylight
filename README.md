@@ -79,7 +79,7 @@ build.sh              compile the binary
 make-app.sh           compile and wrap as keylight.app with an icon (make-icon.swift)
 keylight-start        run the bare binary in the background
 tools/                colour samplers used to extract Serato's palette
-docs/                 screenshots for this README
+docs/                 screenshots for this README and the social preview image
 ```
 
 ## Licence
