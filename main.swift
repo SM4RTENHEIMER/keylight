@@ -405,8 +405,8 @@ final class App: NSObject, NSApplicationDelegate, NSTableViewDataSource, NSTable
         panel.isReleasedWhenClosed = false
         panel.title = "keylight"
 
-        content.wantsLayer = true                     // nearly opaque, no blur: colours stay crisp
-        content.layer?.backgroundColor = NSColor(white: 0.07, alpha: 0.94).cgColor
+        content.wantsLayer = true                     // opaque, no blur: colours stay crisp and Serato never shows through
+        content.layer?.backgroundColor = NSColor(white: 0.07, alpha: 1).cgColor
         content.layer?.cornerRadius = 14
         content.layer?.masksToBounds = true
         content.layer?.borderWidth = 1
