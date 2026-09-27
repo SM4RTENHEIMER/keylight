@@ -82,6 +82,13 @@ tools/                colour samplers used to extract Serato's palette
 docs/                 screenshots for this README and the social preview image
 ```
 
+## Use at your own risk
+
+keylight is provided as it is, without warranty of any kind (see the licence). The keys, BPM
+and matches it shows come from Serato's library and can be wrong or out of date: check them
+with your ears before you rely on them. The author takes no responsibility for how it is used
+or for anything that comes of using it, as far as the law allows.
+
 ## Licence
 
 MIT, see [LICENSE](LICENSE).
